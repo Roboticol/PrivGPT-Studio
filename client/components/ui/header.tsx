@@ -15,9 +15,11 @@ import {
 } from "@/components/ui/sheet";
 import Image from "next/image";
 import { useTheme } from "@/components/theme-provider";
+import { useAuth } from "@/context/AuthContext";
 
 export default function header() {
   const { darkMode } = useTheme();
+  const { token } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const closeMobileMenu = () => {
@@ -27,8 +29,8 @@ export default function header() {
   return (
     <header className="border-b sticky top-0 z-50 bg-background">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        
-         <Link href="/" className="flex items-center">
+
+        <Link href="/" className="flex items-center">
           <Image
             src={darkMode ? "/logos/logo-dark.svg" : "/logos/logo-light.svg"}
             alt="PrivGPT Studio Logo"
@@ -51,7 +53,7 @@ export default function header() {
             <Link href="/about">
               <Button variant="ghost">About Us</Button>
             </Link>
-            <Link href="/chat">
+            <Link href={token ? "/chat" : "/sign-in?redirect=/chat"}>
               <Button variant="outline">Try Chat</Button>
             </Link>
           </nav>
@@ -93,7 +95,7 @@ export default function header() {
                   </Link>
                 </SheetClose>
                 <SheetClose asChild>
-                  <Link href="/chat">
+                  <Link href={token ? "/chat" : "/sign-in?redirect=/chat"}>
                     <Button
                       variant="outline"
                       className="w-full"

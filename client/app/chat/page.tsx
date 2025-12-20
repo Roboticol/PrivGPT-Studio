@@ -109,8 +109,13 @@ interface UploadedFile {
   file: File;
 }
 
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+
 export default function ChatPage() {
   const { darkMode } = useTheme();
+  const { token, logout, isLoading } = useAuth();
+  const router = useRouter();
 
   // Loading dots animation component
   const LoadingDots = () => {
@@ -157,11 +162,10 @@ export default function ChatPage() {
           return (
             <span
               key={index}
-              className={`transition-colors duration-150 ${
-                isCurrentWord
-                  ? 'bg-sky-100/90 dark:bg-sky-300/40 rounded px-0.5'
-                  : ''
-              }`}
+              className={`transition-colors duration-150 ${isCurrentWord
+                ? 'bg-sky-100/90 dark:bg-sky-300/40 rounded px-0.5'
+                : ''
+                }`}
             >
               {segment.text}
             </span>
@@ -306,11 +310,10 @@ export default function ChatPage() {
               return isInline ? (
                 // Inline code
                 <code
-                  className={`px-1.5 py-0.5 rounded text-sm font-mono ${
-                    isUser
-                      ? "bg-primary-foreground/10 text-primary-foreground"
-                      : "bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400"
-                  }`}
+                  className={`px-1.5 py-0.5 rounded text-sm font-mono ${isUser
+                    ? "bg-primary-foreground/10 text-primary-foreground"
+                    : "bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400"
+                    }`}
                   {...props}
                 >
                   {children}
@@ -347,33 +350,30 @@ export default function ChatPage() {
             // Headers
             h1: ({ children }) => (
               <h1
-                className={`text-2xl font-bold mt-6 mb-4 ${
-                  isUser
-                    ? "text-primary-foreground"
-                    : "text-gray-900 dark:text-gray-100"
-                }`}
+                className={`text-2xl font-bold mt-6 mb-4 ${isUser
+                  ? "text-primary-foreground"
+                  : "text-gray-900 dark:text-gray-100"
+                  }`}
               >
                 {children}
               </h1>
             ),
             h2: ({ children }) => (
               <h2
-                className={`text-xl font-semibold mt-5 mb-3 ${
-                  isUser
-                    ? "text-primary-foreground"
-                    : "text-gray-900 dark:text-gray-100"
-                }`}
+                className={`text-xl font-semibold mt-5 mb-3 ${isUser
+                  ? "text-primary-foreground"
+                  : "text-gray-900 dark:text-gray-100"
+                  }`}
               >
                 {children}
               </h2>
             ),
             h3: ({ children }) => (
               <h3
-                className={`text-lg font-semibold mt-4 mb-2 ${
-                  isUser
-                    ? "text-primary-foreground"
-                    : "text-gray-900 dark:text-gray-100"
-                }`}
+                className={`text-lg font-semibold mt-4 mb-2 ${isUser
+                  ? "text-primary-foreground"
+                  : "text-gray-900 dark:text-gray-100"
+                  }`}
               >
                 {children}
               </h3>
@@ -403,11 +403,10 @@ export default function ChatPage() {
             // Paragraphs
             p: ({ children }) => (
               <p
-                className={`mb-3 leading-relaxed ${
-                  isUser
-                    ? "text-primary-foreground"
-                    : "text-gray-800 dark:text-gray-200"
-                }`}
+                className={`mb-3 leading-relaxed ${isUser
+                  ? "text-primary-foreground"
+                  : "text-gray-800 dark:text-gray-200"
+                  }`}
               >
                 {children}
               </p>
@@ -415,11 +414,10 @@ export default function ChatPage() {
             // Blockquotes
             blockquote: ({ children }) => (
               <blockquote
-                className={`border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 italic ${
-                  isUser
-                    ? "text-primary-foreground/80"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
+                className={`border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 italic ${isUser
+                  ? "text-primary-foreground/80"
+                  : "text-gray-600 dark:text-gray-400"
+                  }`}
               >
                 {children}
               </blockquote>
@@ -467,11 +465,10 @@ export default function ChatPage() {
             // Strong/Bold
             strong: ({ children }) => (
               <strong
-                className={`font-bold ${
-                  isUser
-                    ? "text-primary-foreground"
-                    : "text-gray-900 dark:text-gray-100"
-                }`}
+                className={`font-bold ${isUser
+                  ? "text-primary-foreground"
+                  : "text-gray-900 dark:text-gray-100"
+                  }`}
               >
                 {children}
               </strong>
@@ -479,11 +476,10 @@ export default function ChatPage() {
             // Emphasis/Italic
             em: ({ children }) => (
               <em
-                className={`italic ${
-                  isUser
-                    ? "text-primary-foreground"
-                    : "text-gray-800 dark:text-gray-200"
-                }`}
+                className={`italic ${isUser
+                  ? "text-primary-foreground"
+                  : "text-gray-800 dark:text-gray-200"
+                  }`}
               >
                 {children}
               </em>
@@ -766,7 +762,7 @@ export default function ChatPage() {
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
         }
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -808,9 +804,9 @@ export default function ChatPage() {
         const storedType =
           (typeof window !== "undefined"
             ? (localStorage.getItem("selected_model_type") as
-                | "local"
-                | "cloud"
-                | null)
+              | "local"
+              | "cloud"
+              | null)
             : null);
 
         // Always select the first available model as default
@@ -872,83 +868,70 @@ export default function ChatPage() {
 
   useEffect(() => {
     const fetchChatSessionHistory = async () => {
-      const storedSessions = JSON.parse(
-        localStorage.getItem("chat_sessions") || "[]"
-      );
-
-      // ✅ If no previous sessions, just show welcome
-      if (storedSessions.length === 0) {
-        setSessionId(welcomeSession.id); // "1"
-        setMessages([welcomeMessage]);
-        setChatSessions([welcomeSession]);
-        if (newChatSessionBtnRef.current) {
-          newChatSessionBtnRef.current.disabled = true;
-        }
-        return;
-      }
+      if (isLoading) return; // Wait for auth to initialize
 
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/history`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_ids: storedSessions }),
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to fetch session history");
-
-        const sessions = await response.json();
-
-        if (sessions.length > 0) {
-          const transformedSessions: ChatSession[] = sessions.map(
-            (session: any) => {
-              const lastMsg =
-                session.messages?.[session.messages.length - 1]?.content ||
-                welcomeSession.lastMessage;
-              return {
-                id: session._id,
-                created_at: session.created_at,
-                lastMessage: lastMsg,
-                sessionName: session.session_name || lastMsg,
-              };
+        // CRITICAL FIX: Logged-in users fetch from backend, guests use localStorage
+        if (token) {
+          // USER IS LOGGED IN: Fetch their sessions from backend
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat/history`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ session_ids: [] }), // Backend ignores this for logged-in users
             }
           );
 
-          // ✅ Always keep welcomeSession first in the list
-          setChatSessions([...transformedSessions]);
+          if (!response.ok) throw new Error("Failed to fetch session history");
 
-          // ✅ Only reset to welcomeSession if you are currently on it
-          if (sessionId === welcomeSession.id || !sessionId) {
-            setSessionId(welcomeSession.id); // stays as "1"
-            if (newChatSessionBtnRef.current)
-              newChatSessionBtnRef.current.disabled = true;
+          const sessions = await response.json();
 
-            // show only welcome message if welcome is selected
-            setMessages([welcomeMessage]);
-            return;
-          }
+          if (sessions.length > 0) {
+            const transformedSessions: ChatSession[] = sessions.map(
+              (session: any) => {
+                const lastMsg =
+                  session.messages?.[session.messages.length - 1]?.content ||
+                  welcomeSession.lastMessage;
+                return {
+                  id: session._id,
+                  created_at: session.created_at,
+                  lastMessage: lastMsg,
+                  sessionName: session.session_name || lastMsg,
+                };
+              }
+            );
 
-          // ✅ Otherwise, load messages for currently active sessionId
-          const activeSession =
-            sessions.find((s: any) => s._id === sessionId) || sessions[0];
-          const formattedMessages: Message[] = activeSession.messages?.map(
-            (msg: any, index: number) => {
-              const normalizedRole: "user" | "assistant" =
-                msg.role === "user"
-                  ? "user"
-                  : msg.role === "assistant" || msg.role === "bot"
-                  ? "assistant"
-                  : "assistant";
+            setChatSessions([...transformedSessions]);
 
-              return {
-                id: msg.id || (index + 2).toString(),
-                content: msg.content,
-                role: normalizedRole,
-                timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
-                ...(msg.uploaded_file
-                  ? {
+            // Load first session or current
+            if (sessionId === welcomeSession.id || !sessionId) {
+              setSessionId(welcomeSession.id);
+              setMessages([welcomeMessage]);
+              return;
+            }
+
+            const activeSession =
+              sessions.find((s: any) => s._id === sessionId) || sessions[0];
+            const formattedMessages: Message[] = activeSession.messages?.map(
+              (msg: any, index: number) => {
+                const normalizedRole: "user" | "assistant" =
+                  msg.role === "user"
+                    ? "user"
+                    : msg.role === "assistant" || msg.role === "bot"
+                      ? "assistant"
+                      : "assistant";
+
+                return {
+                  id: msg.id || (index + 2).toString(),
+                  content: msg.content,
+                  role: normalizedRole,
+                  timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+                  ...(msg.uploaded_file
+                    ? {
                       file: {
                         name: msg.uploaded_file.name,
                         size: msg.uploaded_file.size,
@@ -956,39 +939,35 @@ export default function ChatPage() {
                         file: msg.uploaded_file.file,
                       } as UploadedFile,
                     }
-                  : {}),
-              };
-            }
-          );
+                    : {}),
+                };
+              }
+            );
 
-          // ✅ Put welcomeMessage on top of history
-          setMessages([welcomeMessage, ...(formattedMessages || [])]);
+            setMessages([welcomeMessage, ...(formattedMessages || [])]);
+          } else {
+            // No sessions yet
+            setSessionId(welcomeSession.id);
+            setMessages([welcomeMessage]);
+            setChatSessions([]);
+          }
+        } else {
+          // USER IS LOGGED OUT (GUEST): Show only welcome
+          setSessionId(welcomeSession.id);
+          setMessages([welcomeMessage]);
+          setChatSessions([]);
         }
       } catch (error) {
         console.error("Failed to fetch session history:", error);
+        setSessionId(welcomeSession.id);
+        setMessages([welcomeMessage]);
+        setChatSessions([]);
       }
     };
 
     fetchChatSessionHistory();
-  }, [sessionId, editedName]);
-  useEffect(() => {
-    if (newChatSessionBtnRef.current && !showSplash) {
-      newChatSessionBtnRef.current.disabled = true;
-    }
-  }, [showSplash]);
-  useEffect(() => {
-    if (chatSessions.some((session) => session.id === "1")) {
-      // welcomeSession exists, disable new chat button
-      if (newChatSessionBtnRef.current) {
-        newChatSessionBtnRef.current.disabled = true;
-      }
-    } else {
-      // no welcome session, allow new chat
-      if (newChatSessionBtnRef.current && sessionId != "1") {
-        newChatSessionBtnRef.current.disabled = false;
-      }
-    }
-  }, [chatSessions]);
+  }, [token, isLoading]); // Re-fetch when auth state changes
+  // The button should be enabled for logged-in users.
 
   useEffect(() => {
     let wasOffline = false; // track previous state
@@ -1106,6 +1085,9 @@ export default function ChatPage() {
       try {
         const response = await fetch(endpoint, {
           method: "POST",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: formData,
         });
 
@@ -1118,13 +1100,17 @@ export default function ChatPage() {
 
         if (sessionId === "1" && data.session_id) {
           setSessionId(data.session_id);
-          localStorage.setItem(
-            "chat_sessions",
-            JSON.stringify([
-              ...JSON.parse(localStorage.getItem("chat_sessions") || "[]"),
-              data.session_id,
-            ])
-          );
+
+          // Update sidebar immediately with new session
+          const newSession: ChatSession = {
+            id: data.session_id,
+            lastMessage: bot_response,
+            sessionName: "How can I help you?", // Default name from backend
+          };
+          setChatSessions((prev) => [newSession, ...prev]);
+          if (newChatSessionBtnRef.current) {
+            newChatSessionBtnRef.current.disabled = false;
+          }
         }
 
         const assistantMessage: Message = {
@@ -1184,6 +1170,9 @@ export default function ChatPage() {
     try {
       const response = await fetch(endpoint, {
         method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: formData,
         signal: controller.signal,
       });
@@ -1242,15 +1231,17 @@ export default function ChatPage() {
                   case "complete":
                     if (data.session_id && sessionId === "1") {
                       setSessionId(data.session_id);
-                      localStorage.setItem(
-                        "chat_sessions",
-                        JSON.stringify([
-                          ...JSON.parse(
-                            localStorage.getItem("chat_sessions") || "[]"
-                          ),
-                          data.session_id,
-                        ])
-                      );
+
+                      // Update sidebar immediately with new session
+                      const newSession: ChatSession = {
+                        id: data.session_id,
+                        lastMessage: streamedContent,
+                        sessionName: "How can I help you?", // Default name from backend
+                      };
+                      setChatSessions((prev) => [newSession, ...prev]);
+                      if (newChatSessionBtnRef.current) {
+                        newChatSessionBtnRef.current.disabled = false;
+                      }
                     }
 
                     // Update final message with timestamp and initialize versions
@@ -1258,13 +1249,13 @@ export default function ChatPage() {
                       prev.map((msg) =>
                         msg.id === tempAssistantMessage.id
                           ? {
-                              ...msg,
-                              content: streamedContent,
-                              timestamp: new Date(data.timestamp),
-                              versions: [streamedContent],
-                              versionTimestamps: [new Date(data.timestamp)],
-                              currentVersionIndex: 0,
-                            }
+                            ...msg,
+                            content: streamedContent,
+                            timestamp: new Date(data.timestamp),
+                            versions: [streamedContent],
+                            versionTimestamps: [new Date(data.timestamp)],
+                            currentVersionIndex: 0,
+                          }
                           : msg
                       )
                     );
@@ -1320,10 +1311,10 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === tempAssistantMessage.id
               ? {
-                  ...msg,
-                  content:
-                    (msg.content || "") + "\n\n[Generation stopped by user]",
-                }
+                ...msg,
+                content:
+                  (msg.content || "") + "\n\n[Generation stopped by user]",
+              }
               : msg
           )
         );
@@ -1335,9 +1326,9 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === tempAssistantMessage.id
               ? {
-                  ...msg,
-                  content: "Failed to get response from AI. Please try again.",
-                }
+                ...msg,
+                content: "Failed to get response from AI. Please try again.",
+              }
               : msg
           )
         );
@@ -1432,13 +1423,13 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === assistantMessage.id
               ? {
-                  ...msg,
-                  content: bot_response,
-                  versions: versions,
-                  versionTimestamps: versionTimestamps,
-                  currentVersionIndex: versions.length - 1,
-                  timestamp: new Date(data.timestamp),
-                }
+                ...msg,
+                content: bot_response,
+                versions: versions,
+                versionTimestamps: versionTimestamps,
+                currentVersionIndex: versions.length - 1,
+                timestamp: new Date(data.timestamp),
+              }
               : msg
           )
         );
@@ -1544,13 +1535,13 @@ export default function ChatPage() {
         prev.map((msg) =>
           msg.id === assistantMessage.id
             ? {
-                ...msg,
-                content: streamedContent,
-                versions: versions,
-                versionTimestamps: versionTimestamps,
-                currentVersionIndex: versions.length - 1,
-                timestamp: timestampValue,
-              }
+              ...msg,
+              content: streamedContent,
+              versions: versions,
+              versionTimestamps: versionTimestamps,
+              currentVersionIndex: versions.length - 1,
+              timestamp: timestampValue,
+            }
             : msg
         )
       );
@@ -1647,13 +1638,13 @@ export default function ChatPage() {
           prev.map((msg) =>
             msg.id === assistantMessage.id
               ? {
-                  ...msg,
-                  content: bot_response,
-                  versions: versions,
-                  versionTimestamps: versionTimestamps,
-                  currentVersionIndex: versions.length - 1,
-                  timestamp: new Date(data.timestamp),
-                }
+                ...msg,
+                content: bot_response,
+                versions: versions,
+                versionTimestamps: versionTimestamps,
+                currentVersionIndex: versions.length - 1,
+                timestamp: new Date(data.timestamp),
+              }
               : msg
           )
         );
@@ -1759,13 +1750,13 @@ export default function ChatPage() {
         prev.map((msg) =>
           msg.id === assistantMessage.id
             ? {
-                ...msg,
-                content: streamedContent,
-                versions: versions,
-                versionTimestamps: versionTimestamps,
-                currentVersionIndex: versions.length - 1,
-                timestamp: timestampValue,
-              }
+              ...msg,
+              content: streamedContent,
+              versions: versions,
+              versionTimestamps: versionTimestamps,
+              currentVersionIndex: versions.length - 1,
+              timestamp: timestampValue,
+            }
             : msg
         )
       );
@@ -2187,8 +2178,8 @@ export default function ChatPage() {
             msg.role === "user"
               ? "user"
               : msg.role === "assistant" || msg.role === "bot"
-              ? "assistant"
-              : "assistant"; // default unknown roles to assistant
+                ? "assistant"
+                : "assistant"; // default unknown roles to assistant
 
           return {
             id: msg.id || `${Date.now()}-${index}`,
@@ -2197,13 +2188,13 @@ export default function ChatPage() {
             timestamp: new Date(msg.timestamp),
             ...(msg.uploaded_file
               ? {
-                  file: {
-                    name: msg.uploaded_file.name,
-                    size: msg.uploaded_file.size,
-                    type: msg.uploaded_file.type,
-                    file: msg.uploaded_file.file,
-                  } as UploadedFile,
-                }
+                file: {
+                  name: msg.uploaded_file.name,
+                  size: msg.uploaded_file.size,
+                  type: msg.uploaded_file.type,
+                  file: msg.uploaded_file.file,
+                } as UploadedFile,
+              }
               : {}),
           };
         }
@@ -2331,7 +2322,7 @@ export default function ChatPage() {
 
       if (res.ok) {
         setChatSessions((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, name: editedName } : s))
+          prev.map((s) => (s.id === id ? { ...s, sessionName: editedName } : s))
         );
       } else {
         const errorText = await res.text();
@@ -2386,17 +2377,15 @@ export default function ChatPage() {
   [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
   dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 
   dark:[&::-webkit-scrollbar-thumb:hover]:bg-gray-500
-  lg:static inset-y-0 left-0 z-50 bg-background border-r transform transition-all duration-300 ease-in-out ${
-    isSidebarOpen
-      ? "translate-x-0 w-80 lg:w-80"
-      : "-translate-x-full lg:translate-x-0 lg:w-0 lg:border-r-0"
-  }`}
+  lg:static inset-y-0 left-0 z-50 bg-background border-r transform transition-all duration-300 ease-in-out ${isSidebarOpen
+            ? "translate-x-0 w-80 lg:w-80"
+            : "-translate-x-full lg:translate-x-0 lg:w-0 lg:border-r-0"
+          }`}
       >
         {/* Sidebar Header */}
         <div
-          className={`sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b px-4 py-4 ${
-            !isSidebarOpen ? "lg:hidden" : ""
-          }`}
+          className={`sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b px-4 py-4 ${!isSidebarOpen ? "lg:hidden" : ""
+            }`}
         >
           <div className="flex items-center justify-between">
             <Link href="/">
@@ -2408,7 +2397,7 @@ export default function ChatPage() {
                 priority
                 className="w-[220px] h-auto"
               />
-              </Link>
+            </Link>
 
             <div className="flex items-center space-x-2">
               <ThemeToggle />
@@ -2544,6 +2533,10 @@ export default function ChatPage() {
               variant="ghost"
               className="w-full justify-start"
               onClick={() => {
+                if (!token) {
+                  router.push("/sign-in");
+                  return;
+                }
                 handleNewChatSession();
                 // Close sidebar on mobile after creating new chat
                 if (window.innerWidth < 1024) {
@@ -2554,6 +2547,34 @@ export default function ChatPage() {
               <PlusCircle className="w-4 h-4 mr-2" />
               New Chat
             </Button>
+            {token && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                onClick={() => {
+                  logout();
+                  router.push("/sign-in");
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4 mr-2"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" x2="9" y1="12" y2="12" />
+                </svg>
+                Sign Out
+              </Button>
+            )}
             <Button
               variant="ghost"
               className="w-full justify-start"
@@ -2696,9 +2717,8 @@ export default function ChatPage() {
 
       {/* Main Chat Panel */}
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? "lg:ml-0" : "lg:ml-0"
-        }`}
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${isSidebarOpen ? "lg:ml-0" : "lg:ml-0"
+          }`}
       >
         {/* Chat Header with Hamburger */}
         <div className="border-b p-4">
@@ -2740,16 +2760,14 @@ export default function ChatPage() {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
+                }`}
             >
               <div
-                className={`flex items-start space-x-2 max-w-2xl ${
-                  message.role === "user"
-                    ? "flex-row-reverse space-x-reverse"
-                    : ""
-                }`}
+                className={`flex items-start space-x-2 max-w-2xl ${message.role === "user"
+                  ? "flex-row-reverse space-x-reverse"
+                  : ""
+                  }`}
               >
                 <Avatar className="w-8 h-8">
                   <AvatarFallback>
@@ -2758,11 +2776,10 @@ export default function ChatPage() {
                 </Avatar>
                 <div className="flex flex-col items-start">
                   <div
-                    className={`rounded-lg px-4 py-2 ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
+                    className={`rounded-lg px-4 py-2 ${message.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                      }`}
                   >
                     {message.file && (
                       <div className="mt-2 flex items-center space-x-2 bg-muted/50 rounded-lg p-2 max-w-xs mb-3">
@@ -2909,37 +2926,37 @@ export default function ChatPage() {
                         </DropdownMenu>
                         {/* Version navigation for assistant messages with multiple versions */}
                         {message.versions &&
-                         message.versions.length > 1 && (
-                          <div className="flex items-center gap-1 ml-2 text-xs opacity-70">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              title="Previous version"
-                              aria-label="Previous version"
-                              disabled={(message.currentVersionIndex ?? 0) === 0}
-                              onClick={() => handleVersionChange(message.id, "prev")}
-                            >
-                              <ChevronLeft className="w-3 h-3" />
-                            </Button>
-                            <span className="min-w-[40px] text-center">
-                              {(message.currentVersionIndex ?? 0) + 1}/{message.versions.length}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              title="Next version"
-                              aria-label="Next version"
-                              disabled={
-                                (message.currentVersionIndex ?? 0) === message.versions.length - 1
-                              }
-                              onClick={() => handleVersionChange(message.id, "next")}
-                            >
-                              <ChevronRight className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
+                          message.versions.length > 1 && (
+                            <div className="flex items-center gap-1 ml-2 text-xs opacity-70">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Previous version"
+                                aria-label="Previous version"
+                                disabled={(message.currentVersionIndex ?? 0) === 0}
+                                onClick={() => handleVersionChange(message.id, "prev")}
+                              >
+                                <ChevronLeft className="w-3 h-3" />
+                              </Button>
+                              <span className="min-w-[40px] text-center">
+                                {(message.currentVersionIndex ?? 0) + 1}/{message.versions.length}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Next version"
+                                aria-label="Next version"
+                                disabled={
+                                  (message.currentVersionIndex ?? 0) === message.versions.length - 1
+                                }
+                                onClick={() => handleVersionChange(message.id, "next")}
+                              >
+                                <ChevronRight className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                       </>
                     )}
                   </div>
@@ -2999,11 +3016,10 @@ export default function ChatPage() {
               variant="ghost"
               size="sm"
               onClick={handleVoiceInput}
-              className={`${
-                isRecording
-                  ? "text-red-500 animate-pulse bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40"
-                  : "hover:text-primary"
-              } transition-all duration-200`}
+              className={`${isRecording
+                ? "text-red-500 animate-pulse bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40"
+                : "hover:text-primary"
+                } transition-all duration-200`}
               title={isRecording ? "Stop recording" : "Start voice input"}
             >
               <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
@@ -3097,9 +3113,8 @@ export default function ChatPage() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder="Type your message in markdown..."
-                  className={`flex-1 resize-none min-h-[80px] ${
-                    isRecording ? "text-transparent caret-foreground" : ""
-                  }`}
+                  className={`flex-1 resize-none min-h-[80px] ${isRecording ? "text-transparent caret-foreground" : ""
+                    }`}
                 />
               )}
             </div>

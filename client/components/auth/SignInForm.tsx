@@ -4,6 +4,9 @@ import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import Header from "@/components/ui/header";
-import Footer from "@/components/ui/footer";
 import { Input } from "@/components/ui/input";
-import { Head } from "react-day-picker";
 
 const formSchema = z.object({
   email: z
@@ -35,6 +35,10 @@ const formSchema = z.object({
 });
 
 export function SignInForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  const { login } = useAuth();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -43,8 +47,33 @@ export function SignInForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("Sign In Values:", values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:5000";
+      const response = await fetch(`${backendUrl}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        login(data.token);
+        toast.success("Logged in successfully!");
+        router.push(redirect || "/chat");
+      } else {
+        toast.error(data.message || "Login failed");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Something went wrong. Please try again.");
+    }
   }
 
   return (

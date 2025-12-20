@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
+import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
       {
         rel: 'icon',
         url: '/logos/logo-icon-dark.svg',
-        media: '(prefers-color-scheme: dark)', 
+        media: '(prefers-color-scheme: dark)',
       },
     ],
   },
@@ -35,9 +36,11 @@ export default function RootLayout({
         className={`${inter.className} bg-white dark:bg-gray-900 text-black dark:text-white transition-colors duration-300`}
       >
         <ThemeProvider>
-          {/* Your existing top navigation (with Try Chat + Sun icon) is inside children */}
-          <Toaster position="top-right" />
-          {children}
+          <AuthProvider>
+            {/* Your existing top navigation (with Try Chat + Sun icon) is inside children */}
+            <Toaster position="top-right" />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

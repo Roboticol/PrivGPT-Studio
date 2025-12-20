@@ -1,10 +1,12 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_pymongo import PyMongo
+from flask_bcrypt import Bcrypt
 from .config import Config
 import google.generativeai as genai
 
 mongo = PyMongo()
+bcrypt = Bcrypt()
 gemini_model = None
 
 
@@ -13,6 +15,7 @@ def create_app():
     CORS(app)
     app.config.from_object(Config)
     mongo.init_app(app)
+    bcrypt.init_app(app)
 
     @app.route("/")
     def index():
@@ -32,4 +35,6 @@ def create_app():
     app.register_blueprint(select_model_bp)
     from server.routes.chat_routes import chat_bp
     app.register_blueprint(chat_bp)
+    from server.routes.auth_routes import auth_bp
+    app.register_blueprint(auth_bp)
     return app

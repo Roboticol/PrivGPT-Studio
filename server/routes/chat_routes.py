@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, current_app
 import requests
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -8,11 +8,33 @@ from server.utils.file_utils import allowed_file, extract_text_from_pdf_bytes
 import json
 import google.generativeai as genai
 from server.config import Config
+import jwt
+from functools import wraps
 
-def save_and_return(session_id, session_name, model_name, user_msg, bot_reply, uploaded_file, file_bytes):
+def validate_user(req):
+    """
+    Validates JWT token from request header.
+    Returns user_id if valid, else None.
+    """
+    token = None
+    if 'Authorization' in req.headers:
+        auth_header = req.headers['Authorization']
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return None
+        
+    try:
+        data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        return data['user_id']
+    except:
+        return None
+
+def save_and_return(session_id, session_name, model_name, user_msg, bot_reply, uploaded_file, file_bytes, user_id=None):
     """
     Saves conversation with file info and returns response JSON.
-
+    
     Returns:
     JSON: Chat response and metadata.
     """
@@ -48,9 +70,17 @@ def save_and_return(session_id, session_name, model_name, user_msg, bot_reply, u
             "messages": messages,
             "created_at": datetime.now(),
             "session_name": session_name or "How can I help you?",
+            "user_id": user_id 
         }
         inserted = mongo.db.sessions.insert_one(session_doc)
         session_id = str(inserted.inserted_id)
+        
+        # Add to user's chat list
+        if user_id:
+             mongo.db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$push": {"chat_sessions": session_id}}
+            )
 
     return jsonify({
         "response": bot_reply,
@@ -75,6 +105,9 @@ def chat():
     """
 
     try:
+        # Validate user
+        user_id = validate_user(request)
+
         # ====== Base form data ======
         user_msg = request.form.get("message", "")
         model_type = request.form.get("model_type", "")
@@ -156,7 +189,7 @@ def chat():
                     bot_reply = response.text or "No reply."
                     # Save to DB (with uploaded_file info)
                     return save_and_return(session_id, session_name, model_name, user_msg, bot_reply, uploaded_file,
-                                           file_bytes)
+                                           file_bytes, user_id)
 
         # ====== Model Handling (text only or text+mentions) ======
         bot_reply = "No reply."
@@ -246,9 +279,17 @@ def chat():
                 "session_name": session_name or "How can I help you?",
                 "messages": messages,
                 "created_at": datetime.now(),
+                "user_id": user_id
             }
             inserted = mongo.db.sessions.insert_one(session_doc)
             session_id = str(inserted.inserted_id)
+            
+            # Add to user's chat list if logged in
+            if user_id:
+                mongo.db.users.update_one(
+                    {"_id": ObjectId(user_id)},
+                    {"$push": {"chat_sessions": session_id}}
+                )
 
         return jsonify({
             "response": bot_reply,
@@ -269,6 +310,9 @@ def chat():
 @chat_bp.route("/chat/stream", methods=["POST"])
 def chat_stream():
     try:
+        # Validate user
+        user_id = validate_user(request)
+
         # ====== Base form data ======
         user_msg = request.form.get("message", "")
         model_type = request.form.get("model_type", "")
@@ -492,9 +536,17 @@ def chat_stream():
                         "session_name": session_name or "How can I help you?",
                         "messages": messages,
                         "created_at": datetime.now(),
+                        "user_id": user_id
                     }
                     inserted = mongo.db.sessions.insert_one(session_doc)
                     final_session_id = str(inserted.inserted_id)
+
+                    # Add to user's chat list
+                    if user_id:
+                        mongo.db.users.update_one(
+                            {"_id": ObjectId(user_id)},
+                            {"$push": {"chat_sessions": final_session_id}}
+                        )
                 
                 # Send completion message
                 yield f"data: {json.dumps({'type': 'complete', 'session_id': final_session_id, 'timestamp': end_time.isoformat(), 'latency': latency_ms})}\n\n"
@@ -522,19 +574,41 @@ def chat_history():
     Returns:
     JSON: List of sessions with message history.
     """
-    data = request.json or {}
-    id_list = data.get("session_ids", [])
-
-    try:
-        object_ids = [ObjectId(sid) for sid in id_list]
-    except Exception as e:
-        return jsonify({"error": "Invalid session ID format"}), 400
-
-    sessions = mongo.db.sessions.find({"_id": {"$in": object_ids}}).sort("created_at", -1)
+    user_id = validate_user(request)
+    
+    if user_id:
+        # If logged in, fetch sessions from user's list
+        user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+        if user and "chat_sessions" in user:
+             # Convert to ObjectIds
+             try:
+                 user_session_ids = [ObjectId(sid) for sid in user["chat_sessions"] if ObjectId.is_valid(sid)]
+                 sessions = mongo.db.sessions.find({"_id": {"$in": user_session_ids}}).sort("created_at", -1)
+             except Exception:
+                 sessions = []
+        else:
+            sessions = []
+    else:
+        # If not logged in, fetch only the requested IDs that DO NOT have a user_id
+        # This prevents guests from peeking at user sessions even if they guess an ID
+        data = request.json or {}
+        id_list = data.get("session_ids", [])
+        try:
+            object_ids = [ObjectId(sid) for sid in id_list]
+        except Exception as e:
+            return jsonify({"error": "Invalid session ID format"}), 400
+            
+        sessions = mongo.db.sessions.find({
+            "_id": {"$in": object_ids},
+            "user_id": None # Strict check: guest can only see guest chats
+        }).sort("created_at", -1)
 
     result = []
     for session in sessions:
         session["_id"] = str(session["_id"])
+        if "user_id" in session:
+            session["user_id"] = str(session["user_id"])
+            
         for msg in session.get("messages", []):
             if hasattr(msg["timestamp"], "isoformat"):
                 msg["timestamp"] = msg["timestamp"].isoformat()
@@ -651,6 +725,12 @@ def delete_chat(session_id):
 
         if result.deleted_count == 0:
             return jsonify({"error": "Chat session not found"}), 404
+
+        # Remove from any user's chat list
+        mongo.db.users.update_many(
+            {},
+            {"$pull": {"chat_sessions": session_id}}
+        )
 
         return jsonify({"status": "success", "message": "Chat deleted successfully"})
     except Exception as e:
