@@ -30,6 +30,31 @@ def validate_user(req):
         return data['user_id']
     except:
         return None
+    
+def has_reached_message_limit(session_id):
+    """
+    Checks if the session has reached the configured message limit.
+    Returns True if limit is reached, False otherwise.
+    """
+    # New sessions ("1") or invalid IDs don't have history to limit yet
+    if session_id == "1" or not session_id or not ObjectId.is_valid(session_id):
+        return False
+        
+    limit = current_app.config.get("MAX_MESSAGES_PER_SESSION", 10)
+    
+    # Optimization: Fetch only the message roles to minimize data transfer
+    session = mongo.db.sessions.find_one(
+        {"_id": ObjectId(session_id)},
+        {"messages.role": 1} 
+    )
+    
+    if not session:
+        return False
+        
+    # Count only user messages (prompts)
+    user_msg_count = sum(1 for m in session.get("messages", []) if m.get("role") == "user")
+    
+    return user_msg_count >= limit
 
 def save_and_return(session_id, session_name, model_name, user_msg, bot_reply, uploaded_file, file_bytes, user_id=None):
     """
@@ -115,6 +140,13 @@ def chat():
         session_id = request.form.get("session_id", "1")
         session_name = request.form.get("session_name", "")
         user_timestamp = datetime.now() - timedelta(seconds=10)
+        session_id = request.form.get("session_id", "1")
+
+        if has_reached_message_limit(session_id):
+            return jsonify({
+                "error": "Session limit reached. Please start a new chat.",
+                "limit_reached": True 
+        }), 403
 
         # ====== Inference Parameters ======
         temperature = float(request.form.get("temperature", 0.7))
@@ -319,6 +351,14 @@ def chat_stream():
         model_name = request.form.get("model_name", "")
         session_id = request.form.get("session_id", "1")
         session_name = request.form.get("session_name", "")
+        if has_reached_message_limit(session_id):
+            def error_generator():
+                err_msg = "Session limit reached. Please start a new chat."
+                # This matches the error format your frontend expects in line 969 of page.tsx
+                yield f"data: {json.dumps({'type': 'error', 'message': err_msg, 'limit_reached': True})}\n\n"
+            
+            return Response(error_generator(), mimetype='text/event-stream')
+        
         user_timestamp = datetime.now() - timedelta(seconds=10)
 
         # ====== Inference Parameters ======

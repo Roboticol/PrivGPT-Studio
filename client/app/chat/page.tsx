@@ -542,6 +542,8 @@ export default function ChatPage() {
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
+  // [NEW] Add this state
+  const [isLimitReached, setIsLimitReached] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   // Text-to-Speech (Web Speech API)
   const [speechSupported, setSpeechSupported] = useState<boolean>(false);
@@ -1090,6 +1092,21 @@ export default function ChatPage() {
           },
           body: formData,
         });
+        if (response.status === 403) {
+           const errorData = await response.json();
+           if (errorData.limit_reached) {
+             setIsLimitReached(true);
+             toast.error(errorData.error);
+             setIsTyping(false);
+             // Optional: Remove the optimistic user message since it wasn't processed
+             setMessages((prev) => prev.slice(0, -1)); 
+             return;
+           }
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch AI response");
+        }
 
         if (!response.ok) {
           throw new Error("Failed to fetch AI response");
@@ -1264,6 +1281,12 @@ export default function ChatPage() {
                     break;
 
                   case "error":
+                    if (data.limit_reached) {
+                        setIsLimitReached(true);
+                        toast.error(data.message);
+                        // Stop the stream
+                        stopGeneration();
+                    }
                     streamedContent = data.message;
                     setMessages((prev) =>
                       prev.map((msg) =>
@@ -2147,6 +2170,7 @@ export default function ChatPage() {
 
   const handleCurrentChatSession = async (id: string) => {
     try {
+      setIsLimitReached(false);
       if (id === "1") {
         setMessages([welcomeMessage]);
         setSessionId("1");
@@ -2217,19 +2241,20 @@ export default function ChatPage() {
   };
 
   const handleNewChatSession = () => {
+    setIsLimitReached(false);
     const isAlreadyPresent = chatSessions.some(
       (session) => session.id === welcomeSession.id
     );
 
     if (!isAlreadyPresent) {
       setChatSessions((prev) => [welcomeSession, ...prev]);
-      setSessionId(welcomeSession.id);
-      welcomeMessage.timestamp = new Date();
-      setMessages([welcomeMessage]);
-      if (!isChatSessionsCollapsed)
-        setIsChatSessionsCollapsed(!isChatSessionsCollapsed);
     }
-
+    setSessionId(welcomeSession.id);
+    welcomeMessage.timestamp = new Date();
+    setMessages([welcomeMessage]);
+    if (!isChatSessionsCollapsed){
+      setIsChatSessionsCollapsed(!isChatSessionsCollapsed);
+    }
     if (newChatSessionBtnRef.current) {
       newChatSessionBtnRef.current.disabled = true;
     }
@@ -2992,6 +3017,23 @@ export default function ChatPage() {
 
         {/* Input Area */}
         <div className="border-t p-4">
+          {/* [NEW] Limit Reached Warning */}
+          {isLimitReached && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md flex items-center justify-between">
+               <div className="flex items-center text-red-600 dark:text-red-400 text-sm">
+                  <Info className="w-4 h-4 mr-2" />
+                  <span>You have reached the message limit for this session.</span>
+               </div>
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 className="h-7 text-xs"
+                 onClick={handleNewChatSession}
+               >
+                 Start New Chat
+               </Button>
+            </div>
+          )}
           {/* File Preview */}
           {uploadedFile && (
             <div className="mb-3 flex items-center justify-between bg-muted/50 rounded-lg p-3">
@@ -3061,8 +3103,9 @@ export default function ChatPage() {
               {chatSessionSuggestions.length > 0 ? (
                 <MentionsInput
                   value={input}
+                  disabled={isLimitReached}
                   onChange={(_event, newValue) => setInput(newValue)}
-                  placeholder="Type your message and use @ to mention chats..."
+                  placeholder={isLimitReached ? "Session limit reached. Please start a new chat." :"Type your message and use @ to mention chats..."}
                   style={{
                     control: {
                       backgroundColor: "transparent",
@@ -3110,9 +3153,10 @@ export default function ChatPage() {
               ) : (
                 <Textarea
                   value={input}
+                  disabled={isLimitReached}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Type your message in markdown..."
+                  placeholder={isLimitReached ? "Session limit reached. Please start a new chat." :"Type your message in markdown..."}
                   className={`flex-1 resize-none min-h-[80px] ${isRecording ? "text-transparent caret-foreground" : ""
                     }`}
                 />
@@ -3129,7 +3173,7 @@ export default function ChatPage() {
             ) : (
               <Button
                 onClick={handleSend}
-                disabled={isTyping || (!uploadedFile && input.trim() === "")}
+                disabled={isTyping || (!uploadedFile && input.trim() === "") || isLimitReached}
               >
                 <Send className="w-4 h-4" />
               </Button>
