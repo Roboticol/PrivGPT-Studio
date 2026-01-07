@@ -1,3 +1,20 @@
+<!--
+Title format - <type>: <brief description>
+
+| Type  | Use when                          |
+|-------|-----------------------------------|
+| feat  | Adding a new feature              |
+| fix   | Fixing a bug                      |
+| docs  | Documentation changes only        |
+| test  | Adding or updating tests          |
+| chore | Maintenance, CI, config, tooling  |
+
+Examples:
+feat: add chat export to PDF
+fix: crash when uploading large files
+docs: update setup instructions
+-->
+
 <!-- Thank you for taking the time to contribute! 🙌 -->
 
 # Fixes Issue
