@@ -7,6 +7,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { DayPicker } from "react-day-picker"
+import "react-day-picker/dist/style.css"
+
+import { format } from "date-fns"
+import { CalendarIcon } from "lucide-react"
+
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover"
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +44,16 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
+/* ---- helper functions ---- */
+function isoToDate(value?: string) {
+  return value ? new Date(value) : undefined
+}
+
+function dateToISO(date?: Date) {
+  return date ? format(date, "yyyy-MM-dd") : ""
+}
+
+/* -------- */
 const formSchema = z
   .object({
     email: z
@@ -203,15 +225,42 @@ export function SignUpForm() {
                 control={form.control}
                 name="dob"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Date of Birth</FormLabel>
-                    <FormControl>
-                      <Input type="date" className="dark:[color-scheme:dark]" {...field} />
-                    </FormControl>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            {field.value
+                              ? format(new Date(field.value), "dd-MM-yyyy")
+                              : "dd-mm-yyyy"}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-auto p-3" align="start">
+                        <DayPicker
+                          mode="single"
+                          selected={isoToDate(field.value)}
+                          onSelect={(date) => field.onChange(dateToISO(date))}
+                          fromYear={1900}
+                          toYear={new Date().getFullYear()}
+                          captionLayout="dropdown"
+                          disabled={{ after: new Date() }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="phone"
